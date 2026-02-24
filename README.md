@@ -73,6 +73,7 @@ PDF, 웹페이지 URL, 텍스트 등 다양한 형식의 소스를 노트북에 
 | **AI 채팅** | Google Gemini 3 Flash |
 | **이미지 생성** | Google Gemini 3 Pro Image |
 | **인증** | Google OAuth (Supabase Auth) |
+| **테스트** | Vitest + React Testing Library + Playwright |
 | **모니터링** | Vercel Speed Insights |
 
 ## 시작하기
@@ -192,6 +193,60 @@ npm run dev
 ```
 
 `http://localhost:3000`에서 서비스를 확인할 수 있습니다.
+
+## 테스트
+
+이 프로젝트는 테스트 기반 개발(TDD) 방식을 지원하기 위해 Vitest, React Testing Library, Playwright를 사용합니다.
+
+### 테스트 실행
+
+```bash
+# 단위 테스트 실행
+npm run test
+
+# 테스트 커버리지 확인
+npm run test:coverage
+
+# E2E 테스트 실행
+npm run test:e2e
+
+# 모든 테스트 실행
+npm run test:all
+```
+
+### 테스트 구조
+
+```
+src/
+├── app/api/
+│   ├── chat/__tests__/route.test.ts      # Chat API 테스트
+│   └── studio/
+│       ├── slides/__tests__/route.test.ts    # Slides API 테스트
+│       ├── infographic/__tests__/route.test.ts # Infographic API 테스트
+│       └── mindmap/__tests__/route.test.ts   # Mindmap API 테스트
+└── lib/
+    ├── errors/              # 에러 처리 클래스
+    └── validations/         # Zod 검증 스키마
+```
+
+### 에러 처리 및 검증
+
+모든 API 엔드포인트는 다음을 포함합니다:
+
+- **Zod 스키마 검증**: 입력 데이터의 타입 안전성 보장
+- **커스텀 에러 클래스**: 구조화된 에러 응답
+- **표준화된 에러 형식**: 일관된 에러 메시지
+
+```typescript
+// 에러 응답 형식
+interface ErrorResponse {
+  error: {
+    code: string;        // 에러 코드 (예: VALIDATION_ERROR)
+    message: string;     // 사용자 친화적 메시지
+    details?: unknown;   // 추가 디버깅 정보 (개발 환경만)
+  }
+}
+```
 
 ## 라이선스
 
