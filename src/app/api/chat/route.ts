@@ -1,9 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { generateChatResponse } from "@/lib/ai/gemini";
 import { buildSourceTexts } from "@/lib/utils/source-text";
+import {
+  handleApiError,
+  AuthenticationError,
+} from "@/lib/errors";
+import { validateRequest } from "@/lib/validations/middleware";
+import { chatPostSchema } from "@/lib/validations";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
     const {
@@ -11,17 +17,11 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      throw new AuthenticationError();
     }
 
-    const { notebookId, message } = await request.json();
-
-    if (!notebookId || !message) {
-      return NextResponse.json(
-        { error: "노트북 ID와 메시지가 필요합니다." },
-        { status: 400 }
-      );
-    }
+    // Validate request body with Zod schema
+    const { notebookId, message } = await validateRequest(request, chatPostSchema);
 
     // Save user message
     await supabase.from("chat_messages").insert({
@@ -106,10 +106,6 @@ ${sourceContext}`;
       },
     });
   } catch (error) {
-    console.error("Chat error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, { route: "/api/chat" });
   }
 }

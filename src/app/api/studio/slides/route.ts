@@ -1,8 +1,15 @@
-import { NextResponse, after } from "next/server";
+import { NextResponse, after, NextRequest } from "next/server";
 import { createServerSupabaseClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { generateSlideImage, type SlideType, type DesignTheme } from "@/lib/ai/nano-banana";
 import { generateText } from "@/lib/ai/gemini";
 import { buildSourceTexts } from "@/lib/utils/source-text";
+import {
+  handleApiError,
+  AuthenticationError,
+  ValidationError,
+} from "@/lib/errors";
+import { validateRequest } from "@/lib/validations/middleware";
+import { slidesPostSchema } from "@/lib/validations";
 
 async function runWithConcurrency<T>(
   tasks: (() => Promise<T>)[],
@@ -31,7 +38,7 @@ async function runWithConcurrency<T>(
   return results;
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
     const {
@@ -39,20 +46,16 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      throw new AuthenticationError();
     }
+
+    // Validate request body with Zod schema
+    const validated = await validateRequest(request, slidesPostSchema);
 
     const {
       notebookId, format, language, prompt, slideCount, designThemeId,
-      includeCover = true, includeBridge = true, includePageNumber = true, pageNumberPosition = "bottom-right",
-    } = await request.json();
-
-    if (!notebookId) {
-      return NextResponse.json(
-        { error: "노트북 ID가 필요합니다." },
-        { status: 400 }
-      );
-    }
+      includeCover, includeBridge, includePageNumber, pageNumberPosition,
+    } = validated;
 
     // Get enabled sources
     const { data: sources } = await supabase
@@ -63,10 +66,7 @@ export async function POST(request: Request) {
       .eq("processing_status", "completed");
 
     if (!sources || sources.length === 0) {
-      return NextResponse.json(
-        { error: "활성화된 소스가 없습니다." },
-        { status: 400 }
-      );
+      throw new ValidationError("활성화된 소스가 없습니다.");
     }
 
     // Create studio output record
@@ -85,10 +85,7 @@ export async function POST(request: Request) {
       .single();
 
     if (insertError || !output) {
-      return NextResponse.json(
-        { error: "출력 레코드 생성 실패" },
-        { status: 500 }
-      );
+      throw new Error("출력 레코드 생성 실패");
     }
 
     // Generate in background using after() to keep serverless function alive
@@ -389,10 +386,6 @@ ${userThemePrompt
 
     return NextResponse.json({ id: output.id, status: "generating" });
   } catch (error) {
-    console.error("Slides API error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, { route: "/api/studio/slides" });
   }
 }

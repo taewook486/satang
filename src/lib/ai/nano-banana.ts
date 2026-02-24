@@ -2,6 +2,36 @@ import { GoogleGenAI } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
+/**
+ * Type definitions for Google GenAI responses
+ * These types are based on the actual API response structure
+ */
+
+interface InlineData {
+  data: string;
+  mimeType: string;
+}
+
+interface Part {
+  text?: string;
+  inlineData?: InlineData;
+}
+
+interface Content {
+  parts: Part[];
+  role?: string;
+}
+
+interface Candidate {
+  content: Content;
+  finishReason?: string;
+  index?: number;
+}
+
+interface GenerateContentResponse {
+  candidates?: Candidate[];
+}
+
 const ASPECT_RATIOS: Record<string, string> = {
   landscape: "16:9",
   portrait: "9:16",
@@ -67,10 +97,9 @@ ${userPrompt ? `Additional style instructions: ${userPrompt}` : ""}`;
         aspectRatio: ASPECT_RATIOS[orientation] || "16:9",
       },
     } as Record<string, unknown>,
-  });
+  }) as GenerateContentResponse;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const parts: any[] = response.candidates?.[0]?.content?.parts || [];
+  const parts: Part[] = response.candidates?.[0]?.content?.parts || [];
   const imagePart = parts.find((p) => p.inlineData);
 
   if (!imagePart?.inlineData) {
@@ -78,8 +107,8 @@ ${userPrompt ? `Additional style instructions: ${userPrompt}` : ""}`;
   }
 
   return {
-    imageData: imagePart.inlineData.data as string,
-    mimeType: imagePart.inlineData.mimeType as string,
+    imageData: imagePart.inlineData.data,
+    mimeType: imagePart.inlineData.mimeType,
   };
 }
 
@@ -170,7 +199,7 @@ export async function generateSlideImage(params: {
   userThemePrompt?: string;
   language: string;
   format: string;
-  userPrompt: string;
+  userPrompt?: string;
   includePageNumber?: boolean;
   pageNumberPosition?: string;
 }): Promise<{ imageData: string; mimeType: string }> {
@@ -250,10 +279,9 @@ ${userPrompt ? `Additional instructions: ${userPrompt}` : ""}`;
         aspectRatio: "16:9",
       },
     } as Record<string, unknown>,
-  });
+  }) as GenerateContentResponse;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const parts: any[] = response.candidates?.[0]?.content?.parts || [];
+  const parts: Part[] = response.candidates?.[0]?.content?.parts || [];
   const imagePart = parts.find((p) => p.inlineData);
 
   if (!imagePart?.inlineData) {
@@ -261,8 +289,8 @@ ${userPrompt ? `Additional instructions: ${userPrompt}` : ""}`;
   }
 
   return {
-    imageData: imagePart.inlineData.data as string,
-    mimeType: imagePart.inlineData.mimeType as string,
+    imageData: imagePart.inlineData.data,
+    mimeType: imagePart.inlineData.mimeType,
   };
 }
 
@@ -364,8 +392,7 @@ Requirements:
 - Maintain the same visual style as the original slide
 - Only apply the requested changes`;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const requestParts: any[] = [
+  const requestParts: Part[] = [
     { text: prompt },
     {
       inlineData: {
@@ -396,10 +423,9 @@ Requirements:
         aspectRatio: "16:9",
       },
     } as Record<string, unknown>,
-  });
+  }) as GenerateContentResponse;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const parts: any[] = response.candidates?.[0]?.content?.parts || [];
+  const parts: Part[] = response.candidates?.[0]?.content?.parts || [];
   const imagePart = parts.find((p) => p.inlineData);
 
   if (!imagePart?.inlineData) {
@@ -407,7 +433,7 @@ Requirements:
   }
 
   return {
-    imageData: imagePart.inlineData.data as string,
-    mimeType: imagePart.inlineData.mimeType as string,
+    imageData: imagePart.inlineData.data,
+    mimeType: imagePart.inlineData.mimeType,
   };
 }
