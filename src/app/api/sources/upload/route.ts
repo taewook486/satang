@@ -101,12 +101,11 @@ export async function POST(request: Request) {
             .download(filePath);
           if (fileData) {
             // eslint-disable-next-line @typescript-eslint/no-require-imports
-            const { PDFParse } = require("pdf-parse") as { PDFParse: new (opts: { data: Uint8Array }) => { getText: () => Promise<{ text: string }>; destroy: () => Promise<void> } };
+            const pdfParseModule = require("pdf-parse");
+            const pdfParse = pdfParseModule.default || pdfParseModule;
             const buffer = await fileData.arrayBuffer();
-            const parser = new PDFParse({ data: new Uint8Array(buffer) });
-            const result = await parser.getText();
-            extractedText = result.text;
-            await parser.destroy();
+            const data = await pdfParse(Buffer.from(buffer));
+            extractedText = data.text;
           }
         } else if (sourceType === "text" && filePath) {
           const { data: fileData } = await serviceClient.storage
