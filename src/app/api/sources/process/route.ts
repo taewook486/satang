@@ -4,9 +4,7 @@ import { generateSummary } from "@/lib/ai/gemini";
 
 async function extractTextFromPdf(buffer: ArrayBuffer): Promise<string> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const pdfParseModule = require("pdf-parse");
-    const pdfParse = pdfParseModule.default || pdfParseModule;
+    const pdfParse = (await import("pdf-parse")).default || (await import("pdf-parse"));
     const data = await pdfParse(Buffer.from(buffer));
     return data.text;
   } catch {

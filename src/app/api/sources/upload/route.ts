@@ -100,9 +100,7 @@ export async function POST(request: Request) {
             .from("sources")
             .download(filePath);
           if (fileData) {
-            // eslint-disable-next-line @typescript-eslint/no-require-imports
-            const pdfParseModule = require("pdf-parse");
-            const pdfParse = pdfParseModule.default || pdfParseModule;
+            const pdfParse = (await import("pdf-parse")).default || (await import("pdf-parse"));
             const buffer = await fileData.arrayBuffer();
             const data = await pdfParse(Buffer.from(buffer));
             extractedText = data.text;
